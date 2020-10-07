@@ -17,26 +17,27 @@ metadata {
 		capability "Polling"
 		capability "Actuator"
 		capability "Sensor"
-        capability "Switch Level"
-        capability "Configuration"
+		capability "Switch Level"
+		capability "Configuration"
+		capability "Pushable Button"
         
-        command "motorFullOpen" 
-        command "motorFullClose"
-        command "motorStop"
+		command "motorFullOpen" 
+		command "motorFullClose"
+		command "motorStop"
 
 		fingerprint mfr: "0086", prod: "0103", model: "008D"
-        inClusters: "5E,55,98,9F,6C"
-        inClusters: "85,59,70,2C,2B,26,73,7A,86,72,5A,5B"
+		inClusters: "5E,55,98,9F,6C"
+		inClusters: "85,59,70,2C,2B,26,73,7A,86,72,5A,5B"
 	}
 
 	tiles {
-        standardTile("open", "device.switch", canChangeIcon: false) {
+        	standardTile("open", "device.switch", canChangeIcon: false) {
 			state "open", label: 'Motor Full Open', action: "motorFullOpen", icon: "st.Transportation.transportation13", backgroundColor: "#00a0dc"
 		}
-        standardTile("close", "device.switch", canChangeIcon: false) {
+        	standardTile("close", "device.switch", canChangeIcon: false) {
 			state "close", label: 'Motor Full Close', action: "motorFullClose", icon: "st.Transportation.transportation14", backgroundColor: "#ffffff"
 		}
-        standardTile("stop", "device.switch", canChangeIcon: false) {
+        	standardTile("stop", "device.switch", canChangeIcon: false) {
 			state "default", label: 'Motor Stop', action: "motorStop", icon: "st.switches.switch.stop", backgroundColor: "#00a0dc"
 		}
 
@@ -44,11 +45,11 @@ metadata {
 		details(["motorFullOpen", "clomotorFullClose", "motorStop", "level"])
 	} 
     
-    preferences {
-        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false	
-        input name: "param35ShutterCalibration", type: "number", title: "35. Up/Down calibration time set in seconds [Range = 5 to 255]", multiple: false, value: "150", defaultValue: "150", range: "5..255", required: false, displayDuringSetup: true
-        input name: "param85OperationMode", type: "number", title: "85. Sets the operation mode of the external switches [0 = S1/S2 are up/down, 1 = S1 is up only and S2 is down only", multiple: false, value: "0", defaultValue: "0", range: "0..1", required: false, displayDuringSetup: true
-    }
+	preferences {
+		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false	
+		input name: "param35ShutterCalibration", type: "number", title: "35. Up/Down calibration time set in seconds [Range = 5 to 255]", multiple: false, value: "150", defaultValue: "150", range: "5..255", required: false, displayDuringSetup: true
+		input name: "param85OperationMode", type: "number", title: "85. Sets the operation mode of the external switches [0 = S1/S2 are up/down, 1 = S1 is up only and S2 is down only", multiple: false, value: "0", defaultValue: "0", range: "0..1", required: false, displayDuringSetup: true
+	}
 }
 
 /*
@@ -59,7 +60,7 @@ HUB COMMANDS
 
 def installed() {
 	// Device-Watch simply pings if no device events received for checkInterval duration of 32min = 2 * 15min + 2min lag time
-    if(logEnable) {log.debug "installed()"}
+	if(logEnable) {log.debug "installed()"}
 	sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
 }
 
@@ -224,6 +225,45 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 def zwaveEvent(hubitat.zwave.Command cmd) {
 	log.debug "Unhandled: $cmd"
 	null
+}
+
+/*
+*************************************
+WallSwipe Scene Activation
+*************************************
+*/
+
+//Add [capability "Pushable Button"] to the top of code in the capabilities section
+//Parse() performs zwave.parse() and itterates button to expose
+//Uses attribute "currentButton" to store button #
+//Right = 253 button #
+//Left = 254 button #
+def buttonEvent(button) {
+	button = button as Integer
+	def result = []
+
+	if (button == 253) {button = 1}
+	else if (button == 254) {button = 2}
+
+	updateState("currentButton", "$button")
+
+	log.debug "Button on ${device.displayName} and button #${button} was pushed."
+	result << createEvent(name: "pushed", value: "${button}", data: "${button}", descriptionText: "$device.displayName button $button was pushed", isStateChange: true)
+	log.debug "$result"
+	return result
+}
+
+// A zwave command for a button press was received via Scene Activation
+def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) {
+	log.debug "scene activation activated. ${cmd.sceneId}"
+	buttonEvent(cmd.sceneId)
+}
+
+// Update State
+// Store mode and settings
+def updateState(String name, String value) {
+	state[name] = value
+	device.updateDataValue(name, value)
 }
 
 /*
