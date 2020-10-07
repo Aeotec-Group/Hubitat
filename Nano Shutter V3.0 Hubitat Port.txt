@@ -19,6 +19,7 @@ metadata {
 		capability "Sensor"
         	capability "Switch Level"
         	capability "Configuration"
+		capability "Pushable Button"
         
         	command "motorFullOpen" 
         	command "motorFullClose"
@@ -267,6 +268,45 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 def zwaveEvent(hubitat.zwave.Command cmd) {
 	log.debug "Unhandled: $cmd"
 	null
+}
+
+/*
+*************************************
+WallSwipe Scene Activation
+*************************************
+*/
+
+//Add [capability "Pushable Button"] to the top of code in the capabilities section
+//Parse() performs zwave.parse() and itterates button to expose
+//Uses attribute "currentButton" to store button #
+//Right = 253 button #
+//Left = 254 button #
+def buttonEvent(button) {
+	button = button as Integer
+	def result = []
+
+	if (button == 253) {button = 1}
+	else if (button == 254) {button = 2}
+
+	updateState("currentButton", "$button")
+
+	log.debug "Button on ${device.displayName} and button #${button} was pushed."
+	result << createEvent(name: "pushed", value: "${button}", data: "${button}", descriptionText: "$device.displayName button $button was pushed", isStateChange: true)
+	log.debug "$result"
+	return result
+}
+
+// A zwave command for a button press was received via Scene Activation
+def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) {
+	log.debug "scene activation activated. ${cmd.sceneId}"
+	buttonEvent(cmd.sceneId)
+}
+
+// Update State
+// Store mode and settings
+def updateState(String name, String value) {
+	state[name] = value
+	device.updateDataValue(name, value)
 }
 
 /*
