@@ -17,30 +17,30 @@ metadata {
 		capability "Polling"
 		capability "Actuator"
 		capability "Sensor"
-        capability "Switch Level"
-        capability "Configuration"
+        	capability "Switch Level"
+        	capability "Configuration"
         
-        command "motorFullOpen" 
-        command "motorFullClose"
-        command "motorStop"
+        	command "motorFullOpen" 
+        	command "motorFullClose"
+        	command "motorStop"
 		command "externalSwitchDisable"
 		command "externalSwitchMomentary"
 		command "externalSwitchThreeWay"
 		command "externalSwitchToggle"
 
 		fingerprint mfr: "0371", prod: "0103", model: "008D"
-        inClusters: "5E,55,98,9F,6C"
-        inClusters: "85,59,70,2C,2B,26,73,7A,86,72,5A,5B"
-	}
+        	inClusters: "5E,55,98,9F,6C"
+        	inClusters: "85,59,70,2C,2B,26,73,7A,86,72,5A,5B"
+		}
 
-	tiles {
-        standardTile("open", "device.switch", canChangeIcon: false) {
+		tiles {
+        		standardTile("open", "device.switch", canChangeIcon: false) {
 			state "open", label: 'Motor Full Open', action: "motorFullOpen", icon: "st.Transportation.transportation13", backgroundColor: "#00a0dc"
 		}
-        standardTile("close", "device.switch", canChangeIcon: false) {
+        	standardTile("close", "device.switch", canChangeIcon: false) {
 			state "close", label: 'Motor Full Close', action: "motorFullClose", icon: "st.Transportation.transportation14", backgroundColor: "#ffffff"
 		}
-        standardTile("stop", "device.switch", canChangeIcon: false) {
+        	standardTile("stop", "device.switch", canChangeIcon: false) {
 			state "default", label: 'Motor Stop', action: "motorStop", icon: "st.switches.switch.stop", backgroundColor: "#00a0dc"
 		}
 
@@ -48,11 +48,11 @@ metadata {
 		details(["motorFullOpen", "clomotorFullClose", "motorStop", "level"])
 	} 
     
-    preferences {
-        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false	
-        input name: "param35ShutterCalibration", type: "number", title: "35. Up/Down calibration time set in value*0.01 (15000 = 150 seconds) [Range = 500 to 32767]", multiple: false, value: "15000", defaultValue: "15000", range: "500..32767", required: false, displayDuringSetup: true 
-        input name: "param85OperationMode", type: "number", title: "85. Sets the operation mode of the external switches [0 = S1/S2 is up/down, 1 = S1 is up, S2 is down only, 2 = Venetian mode]", multiple: false, value: "0", defaultValue: "0", range: "0..2", required: false, displayDuringSetup: true
-    }
+	preferences {
+		input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false	
+		input name: "param35ShutterCalibration", type: "number", title: "35. Up/Down calibration time set in value*0.01 (15000 = 150 seconds) [Range = 500 to 32767]", multiple: false, value: "15000", defaultValue: "15000", range: "500..32767", required: false, displayDuringSetup: true 
+		input name: "param85OperationMode", type: "number", title: "85. Sets the operation mode of the external switches [0 = S1/S2 is up/down, 1 = S1 is up, S2 is down only, 2 = Venetian mode]", multiple: false, value: "0", defaultValue: "0", range: "0..2", required: false, displayDuringSetup: true
+	}
 }
 
 /*
@@ -63,76 +63,77 @@ HUB COMMANDS
 
 def installed() {
 	// Device-Watch simply pings if no device events received for checkInterval duration of 32min = 2 * 15min + 2min lag time
-    if(logEnable) {log.debug "installed()"}
+    	if(logEnable) {log.debug "installed()"}
 	sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
 }
 
 def ping() {
-    if(logEnable) {log.debug "ping()"}
+    	if(logEnable) {log.debug "ping()"}
 	refresh()
 }
 
 def poll() {
-    if(logEnable) {log.debug "poll()"}
+    	if(logEnable) {log.debug "poll()"}
 	refresh()
 }
 
 def refresh() {
-    if(logEnable) {log.debug "refresh()"}
+    	if(logEnable) {log.debug "refresh()"}
 	command(zwave.switchMultilevelV3.switchMultilevelGet())
 }
 
 //configure as soon as update button is pressed
 def updated() {
-    if(logEnable) {log.debug "update()"}
+	if(logEnable) {log.debug "update()"}
     
-    def param35
-    def param85
+	def param35
+	def param85
     
-    //ensure parameter settings have value
-    if(!param35ShutterCalibration) {
-        param35 = 15000
-    } else {
-        param35 = param35ShutterCalibration
-    }
-    if(!param85OperationMode) {
-        param85 = 0
-    } else {
-        param85 = param85OperationMode
-    }
+	//ensure parameter settings have value
+	if(!param35ShutterCalibration) {
+		param35 = 15000
+	} else {
+		param35 = param35ShutterCalibration
+	}
+	if(!param85OperationMode) {
+		param85 = 0
+	} else {
+		param85 = param85OperationMode
+	}
     
-    commands([
-    	zwave.configurationV1.configurationSet(parameterNumber: 0x23, size: 2, scaledConfigurationValue: param35),
-        zwave.configurationV1.configurationGet(parameterNumber: 0x23),
-        zwave.configurationV1.configurationSet(parameterNumber: 0x55, size: 1, scaledConfigurationValue: param85),
-        zwave.configurationV1.configurationGet(parameterNumber: 0x55)
-    ])
+	commands([
+		zwave.configurationV1.configurationSet(parameterNumber: 0x23, size: 2, scaledConfigurationValue: param35),
+		zwave.configurationV1.configurationGet(parameterNumber: 0x23),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x55, size: 1, scaledConfigurationValue: param85),
+		zwave.configurationV1.configurationGet(parameterNumber: 0x55)
+	])
 }
 
 //configure when configure button is pressed
 def configure() {
-    if(logEnable) {log.debug "configure()"}
-    def param35
-    def param85
+	if(logEnable) {log.debug "configure()"}
+	
+	def param35
+	def param85
     
-    //ensure parameter settings have value
-    if(!param35ShutterCalibration) {
-        param35 = 15000
-    } else {
-        param35 = param35ShutterCalibration
-    }
-    if(!param85OperationMode) {
-        param85 = 0
-    } else {
-        param85 = param85OperationMode
-    }
+	//ensure parameter settings have value
+	if(!param35ShutterCalibration) {
+		param35 = 15000
+	} else {
+		param35 = param35ShutterCalibration
+	}
+	if(!param85OperationMode) {
+		param85 = 0
+	} else {
+		param85 = param85OperationMode
+	}
     
-    commands([
-    	zwave.configurationV1.configurationSet(parameterNumber: 0x23, size: 2, scaledConfigurationValue: param35),
-        zwave.configurationV1.configurationGet(parameterNumber: 0x23),
-        zwave.configurationV1.configurationSet(parameterNumber: 0x55, size: 1, scaledConfigurationValue: param85),
-        zwave.configurationV1.configurationGet(parameterNumber: 0x55)
-    ])
+	commands([
+		zwave.configurationV1.configurationSet(parameterNumber: 0x23, size: 2, scaledConfigurationValue: param35),
+		zwave.configurationV1.configurationGet(parameterNumber: 0x23),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x55, size: 1, scaledConfigurationValue: param85),
+		zwave.configurationV1.configurationGet(parameterNumber: 0x55)
+	])
 }
 
 /*
@@ -142,65 +143,65 @@ NANO SHUTTER COMMANDS
 */
 
 def setLevel(value, duration = null) {
-    if(logEnable) {log.debug "setLevel($value)"}
-    state.bin = -1
+	if(logEnable) {log.debug "setLevel($value)"}
+	state.bin = -1
 	value = Math.max(Math.min(value.toInteger(), 99), 0)
-    command(zwave.switchMultilevelV3.switchMultilevelSet(value: value))
+	command(zwave.switchMultilevelV3.switchMultilevelSet(value: value))
 }
 
 def motorFullOpen() {
-    if(logEnable) {log.debug "motorFullOpen()"}
+	if(logEnable) {log.debug "motorFullOpen()"}
 	command(zwave.switchMultilevelV3.switchMultilevelSet(value: 99))
 }
 
 def motorFullClose() {
-    if(logEnable) {log.debug "motorFullClose()"}
+	if(logEnable) {log.debug "motorFullClose()"}
 	command(zwave.switchMultilevelV3.switchMultilevelSet(value: 0))
 }
 
 def motorStop() {
-    if(logEnable) {log.debug "motorStop()"}
+	if(logEnable) {log.debug "motorStop()"}
 	command(zwave.switchMultilevelV3.switchMultilevelStopLevelChange())
 }
 
 def externalSwitchDisable() {
 	if(logEnable) {log.debug "externalSwitchDisable()"}
 	commands([
-    	zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 0),
-        zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 0),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 0),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 0),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x78),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x79)
-    ])
+	])
 }
 
 def externalSwitchToggle() {
 	if(logEnable) {log.debug "externalSwitchToggle()"}
 	commands([
-    	zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 1),
-        zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 1),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 1),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 1),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x78),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x79)
-    ])
+	])
 }
 
 def externalSwitchThreeWay() {
 	if(logEnable) {log.debug "externalSwitchThreeWay()"}
 	commands([
-    	zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 2),
-        zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 2),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 2),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 2),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x78),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x79)
-    ])
+	])
 }
 
 def externalSwitchMomentary() {
 	if(logEnable) {log.debug "externalSwitchMomentary()"}
 	commands([
-    	zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 3),
-        zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 3),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x78, size: 1, scaledConfigurationValue: 3),
+		zwave.configurationV1.configurationSet(parameterNumber: 0x79, size: 1, scaledConfigurationValue: 3),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x78),
 		zwave.configurationV1.configurationGet(parameterNumber: 0x79)
-    ])
+	])
 }
 
 /*
@@ -238,25 +239,26 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
-    if(logEnable) {log.debug "DIMMER REPORT: "+cmd}
-    if (cmd.value) {
+	if(logEnable) {log.debug "DIMMER REPORT: "+cmd}
+
+	if (cmd.value) {
 		state.level = cmd.value
-        sendEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName is " + cmd.value + "%")
+		sendEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName is " + cmd.value + "%")
 		sendEvent(name: "position", value: "open", descriptionText: "$device.displayName is open")
 	} else {
-        state.level = cmd.value
-        sendEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName is " + cmd.value + "%")
+		state.level = cmd.value
+		sendEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName is " + cmd.value + "%")
 		sendEvent(name: "position", value: "closed", descriptionText: "$device.displayName is closed")
 	}
 }
 
 def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
-    if(logEnable) {log.debug "PARAMETER and Value: ($cmd.parameterNumber, $cmd.scaledConfigurationValue)"}
+	if(logEnable) {log.debug "PARAMETER and Value: ($cmd.parameterNumber, $cmd.scaledConfigurationValue)"}
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
-    if(logEnable) {log.debug "CMD: "+cmd}
-    def encapsulatedCommand = cmd.encapsulatedCommand()
+	if(logEnable) {log.debug "CMD: "+cmd}
+	def encapsulatedCommand = cmd.encapsulatedCommand()
 	if (encapsulatedCommand) {
 		zwaveEvent(encapsulatedCommand)
 	}
