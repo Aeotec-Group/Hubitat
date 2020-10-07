@@ -1,0 +1,245 @@
+/**
+ *  Copyright 2015 SmartThings
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *  
+ *  Notes - Edited and modifed from Z-Wave Secure Switch for a bare basic use of Aeotec Nano Shutter.
+ */
+metadata {
+	definition(name: "Aeotec Nano Shutter V2.0", namespace: "Aeotec", author: "Chris Cheng", runLocally: false) {
+		capability "Polling"
+		capability "Actuator"
+		capability "Sensor"
+        capability "Switch Level"
+        capability "Configuration"
+        
+        command "motorFullOpen" 
+        command "motorFullClose"
+        command "motorStop"
+
+		fingerprint mfr: "0086", prod: "0103", model: "008D"
+        inClusters: "5E,55,98,9F,6C"
+        inClusters: "85,59,70,2C,2B,26,73,7A,86,72,5A,5B"
+	}
+
+	tiles {
+        standardTile("open", "device.switch", canChangeIcon: false) {
+			state "open", label: 'Motor Full Open', action: "motorFullOpen", icon: "st.Transportation.transportation13", backgroundColor: "#00a0dc"
+		}
+        standardTile("close", "device.switch", canChangeIcon: false) {
+			state "close", label: 'Motor Full Close', action: "motorFullClose", icon: "st.Transportation.transportation14", backgroundColor: "#ffffff"
+		}
+        standardTile("stop", "device.switch", canChangeIcon: false) {
+			state "default", label: 'Motor Stop', action: "motorStop", icon: "st.switches.switch.stop", backgroundColor: "#00a0dc"
+		}
+
+		main (["motorFullOpen", "motorFullClose", "motorStop", "level"])
+		details(["motorFullOpen", "clomotorFullClose", "motorStop", "level"])
+	} 
+    
+    preferences {
+        input name: "logEnable", type: "bool", title: "Enable debug logging", defaultValue: false	
+        input name: "param35ShutterCalibration", type: "number", title: "35. Up/Down calibration time set in seconds [Range = 5 to 255]", multiple: false, value: "150", defaultValue: "150", range: "5..255", required: false, displayDuringSetup: true
+        input name: "param85OperationMode", type: "number", title: "85. Sets the operation mode of the external switches [0 = S1/S2 are up/down, 1 = S1 is up only and S2 is down only", multiple: false, value: "0", defaultValue: "0", range: "0..1", required: false, displayDuringSetup: true
+    }
+}
+
+/*
+*************************************
+HUB COMMANDS
+*************************************
+*/
+
+def installed() {
+	// Device-Watch simply pings if no device events received for checkInterval duration of 32min = 2 * 15min + 2min lag time
+    if(logEnable) {log.debug "installed()"}
+	sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID, offlinePingable: "1"])
+}
+
+def ping() {
+    if(logEnable) {log.debug "ping()"}
+	refresh()
+}
+
+def poll() {
+    if(logEnable) {log.debug "poll()"}
+	refresh()
+}
+
+def refresh() {
+    if(logEnable) {log.debug "refresh()"}
+	command(zwave.switchMultilevelV3.switchMultilevelGet())
+}
+
+def updated() {
+    if(logEnable) {log.debug "update()"}
+    
+    def param35
+    def param85
+    
+    //ensure parameter settings have value
+    if(!param35ShutterCalibration) {
+        param35 = 150
+    } else {
+        param35 = param35ShutterCalibration
+    }
+    if(!param85OperationMode) {
+        param85 = 0
+    } else {
+        param85 = param85OperationMode
+    }
+    
+    commands([
+    	zwave.configurationV1.configurationSet(parameterNumber: 0x23, size: 1, scaledConfigurationValue: param35),
+        zwave.configurationV1.configurationGet(parameterNumber: 0x23),
+        zwave.configurationV1.configurationSet(parameterNumber: 0x55, size: 1, scaledConfigurationValue: param85),
+        zwave.configurationV1.configurationGet(parameterNumber: 0x55)
+    ])
+}
+
+def configure() {
+    if(logEnable) {log.debug "configure()"}
+   
+    def param35
+    def param85
+    
+    //ensure parameter settings have value
+    if(!param35ShutterCalibration) {
+        param35 = 150
+    } else {
+        param35 = param35ShutterCalibration
+    }
+    if(!param85OperationMode) {
+        param85 = 0
+    } else {
+        param85 = param85OperationMode
+    }
+    
+    commands([
+    	zwave.configurationV1.configurationSet(parameterNumber: 0x23, size: 1, scaledConfigurationValue: param35),
+        zwave.configurationV1.configurationGet(parameterNumber: 0x23),
+        zwave.configurationV1.configurationSet(parameterNumber: 0x55, size: 1, scaledConfigurationValue: param85),
+        zwave.configurationV1.configurationGet(parameterNumber: 0x55)
+    ])
+}
+
+/*
+*************************************
+NANO SHUTTER COMMANDS
+*************************************
+*/
+
+def setLevel(value, duration = null) {
+    if(logEnable) {log.debug "setLevel($value)"}
+    
+    value = Math.max(Math.min(value.toInteger(), 99), 0)
+    command(zwave.switchMultilevelV3.switchMultilevelSet(value: value))
+}
+
+def motorFullOpen() {
+    if(logEnable) {log.debug "motorFullOpen()"}
+	commands(zwave.switchMultilevelV3.switchMultilevelSet(value: 99))
+}
+
+def motorFullClose() {
+    if(logEnable) {log.debug "motorFullClose()"}
+	commands(zwave.switchMultilevelV3.switchMultilevelSet(value: 0))
+}
+
+def motorStop() {
+    if(logEnable) {log.debug "motorStop()"}
+    
+    commands([
+        zwave.switchMultilevelV3.switchMultilevelStopLevelChange(),
+        zwave.switchMultilevelV3.switchMultilevelGet()
+    ])
+}
+
+/*
+*************************************
+Z-WAVE EVENTS
+*************************************
+*/
+
+def parse(description) {
+	def result = null
+	if (description.startsWith("Err 106")) {
+		result = createEvent(descriptionText: description, isStateChange: true)
+	} else if (description != "updated") {
+		def cmd = zwave.parse(description, [0x55: 1,0x98: 1,0x85: 2,0x59: 1,0x70: 2,0x2C: 1,0x2B: 1,0x25: 1,0x26: 3,0x73: 1,0x7A: 2,0x86: 1,0x72: 2,0x5A: 1, 0x70: 2])
+		if (cmd) {
+			result = zwaveEvent(cmd)
+			log.debug("'$description' parsed to $result")
+		} else {
+			log.debug("Couldn't zwave.parse '$description'")
+		}
+	}
+	result
+}
+
+def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
+    if(logEnable) {log.debug "BASIC REPORT: "+cmd}
+}
+
+def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd) {
+    if(logEnable) {log.debug "BASIC SET: "+cmd}
+}
+
+def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd) {
+    if(logEnable) {log.debug "BINARY SWITCH REPORT: : "+cmd}
+}
+
+def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
+    if(logEnable) {log.debug "DIMMER REPORT: "+cmd}
+    if (cmd.value) {
+		state.level = cmd.value
+        sendEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName is " + cmd.value + "%")
+		sendEvent(name: "position", value: "open", descriptionText: "$device.displayName is open")
+	} else {
+        state.level = cmd.value
+        sendEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName is " + cmd.value + "%")
+		sendEvent(name: "position", value: "closed", descriptionText: "$device.displayName is closed")
+	}
+}
+
+def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
+    if(logEnable) {log.debug "PARAMETER and Value: ($cmd.parameterNumber, $cmd.scaledConfigurationValue)"}
+}
+
+def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
+    if(logEnable) {log.debug "CMD: "+cmd}
+    def encapsulatedCommand = cmd.encapsulatedCommand()
+	if (encapsulatedCommand) {
+		zwaveEvent(encapsulatedCommand)
+	}
+}
+
+def zwaveEvent(hubitat.zwave.Command cmd) {
+	log.debug "Unhandled: $cmd"
+	null
+}
+
+/*
+*************************************
+RUN COMMANDS
+*************************************
+*/
+
+private command(hubitat.zwave.Command cmd) {
+	if (zwaveInfo?.zw?.contains("s")) {
+		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+	} else {
+		cmd.format()
+	}
+}
+
+private commands(commands, delay = 200) {
+	delayBetween(commands.collect { command(it) }, delay)
+}
